@@ -99,10 +99,23 @@ impl std::str::FromStr for DmxAddress {
             let (universe_str, channel_str) = s.split_at(dot);
             let universe = universe_str.parse::<u32>().map_err(|_| ())?;
             let channel = channel_str[1..].parse::<u32>().map_err(|_| ())?;
-            (universe - 1) * 512 + channel
+            universe.checked_sub(1).ok_or(())? * 512 + channel
         } else {
             s.parse::<u32>().map_err(|_| ())?
         };
         Ok(DmxAddress { dmx_break: 1, absolute: absolute_address })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dmx_address_parsing() {
+        assert_eq!("1".parse::<DmxAddress>().unwrap().absolute(), 1);
+        assert_eq!("1.1".parse::<DmxAddress>().unwrap().absolute(), 1);
+        assert_eq!("2.1".parse::<DmxAddress>().unwrap().absolute(), 513);
+        assert!("0.1".parse::<DmxAddress>().is_err());
     }
 }
