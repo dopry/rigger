@@ -1269,6 +1269,8 @@ impl str::FromStr for DmxValue {
 
         let value = match value_str.parse::<u32>() {
             Ok(v) => v,
+            // Some GDTF files in the wild contain negative values like `-255/4`.
+            Err(_) if value_str.parse::<i64>().is_ok_and(|v| v < 0) => 0,
             Err(_) => todo!("handle error"),
         };
         let bytes = match bytes_str.parse::<u8>() {
@@ -1322,5 +1324,17 @@ impl str::FromStr for DmxOffset {
         }
 
         Ok(DmxOffset::Physical(values))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dmx_value_parsing() {
+        assert_eq!(DmxValue::from_str("128/1").unwrap(), DmxValue::from_u8(128, false));
+        assert_eq!(DmxValue::from_str("65535/2s").unwrap(), DmxValue::from_u16(65535, true));
+        assert_eq!(DmxValue::from_str("-255/4").unwrap(), DmxValue::from_u32(0, false));
     }
 }
